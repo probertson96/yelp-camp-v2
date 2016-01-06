@@ -1,0 +1,8 @@
+RESTFUL ROUTES
+
+name        url             verb        desc
+=============================================================================
+INDEX       /dogs           GET         Displays the dogs
+NEW         /dogs/new       GET         Displays the form to create a new dog
+CREATE      /dogs           POST        Adds new dog to db
+SHOW        /dogs/:id       GET         Shows info about one dog
