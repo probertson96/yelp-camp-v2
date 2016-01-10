@@ -3,35 +3,23 @@ var express = require("express");
 var app = express();
 var bodyParser = require("body-parser");
 var mongoose = require("mongoose");
+var seedDB = require("./seeds");
 
+seedDB();
 mongoose.connect("mongodb://localhost/yelp_camp");
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
+app.use(express.static(__dirname + "/public"));
+
+// Models //
+var Campground = require("./models/campground");
+var Comment = require("./models/comment");
 
 
-// Schema setup //
-var campgroundSchema = new mongoose.Schema({
-   name: String,
-   image: String,
-   description: String
-});
+// ====================================================== //
+// Campground Routes
+// ====================================================== //
 
-var Campground = mongoose.model("Campground", campgroundSchema);
-
-// Campground.create({
-//   name: "Granite Hill",
-//   image: "http://photosforclass.com/download/3844623716",
-//   description: "This is a huge granite hill, no bathrooms, no water. Cool granite"
-// }, function(err, campground) {
-//     if(err) {
-//         console.log(err);
-//     } else {
-//         console.log("New campground");
-//         console.log(campground);
-//     }
-// });
-
-// ROUTES //
 app.get("/", function(req, res){
     res.render("landing");
 });
@@ -42,7 +30,7 @@ app.get("/campgrounds", function(req, res){
        if(err) {
            console.log(err);
        } else {
-           res.render("index", {campgrounds: allCampgrounds});
+           res.render("campgrounds/index", {campgrounds: allCampgrounds});
        }
     });
 });
@@ -66,19 +54,53 @@ app.post("/campgrounds", function(req, res){
 
 // NEW Route
 app.get("/campgrounds/new", function(req, res){
-   res.render("new.ejs"); 
+   res.render("campgrounds/new"); 
 });
 
 // SHOW Route - shows more info about one campground
 app.get("/campgrounds/:id", function(req, res) {
-    Campground.findById(req.params.id, function(err, foundCampground) {
+    Campground.findById(req.params.id).populate("comments").exec(function(err, foundCampground) {
         if(err) {
             console.log(err);
         } else {
-            res.render("show", {campground: foundCampground});
+            console.log(foundCampground);
+            res.render("campgrounds/show", {campground: foundCampground});
         }
     });
 });
+
+// ====================================================== //
+// Comments Routes
+// ====================================================== //
+
+app.get("/campgrounds/:id/comments/new", function(req, res) {
+    Campground.findById(req.params.id, function(err, campground) {
+        if(err) {
+            console.log(err);
+        } else {
+            res.render("comments/new", {campground: campground});
+        }
+    });
+});
+
+app.post("/campgrounds/:id/comments", function(req, res) {
+    Campground.findById(req.params.id, function(err, campground) {
+       if(err) {
+           console.log(err);
+           res.redirect("/campgrounds");
+       } else {
+           Comment.create(req.body.comment, function(err, comment) {
+               if(err) {
+                   console.log(err);
+               } else {
+                    campground.comments.push(comment);
+                    campground.save();
+                    res.redirect("/campgrounds/" + campground._id);
+               }
+           });
+       }
+    });
+})
 
 // Listener //
 app.listen(process.env.PORT, process.env.IP, function(){
